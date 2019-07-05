@@ -13,8 +13,16 @@
 #include "Prototype_test.h"
 
 
+
 void init() {
 	
+	std::string clSrc =
+		"__kernel void test(__global int* message[])"
+		"{"
+		"	int gid = get_global_id(0);"
+		"	message[gid] += gid;"
+		"}";
+
 	int ret = 0;
 	cl_platform_id platform_id = 0;
 	cl_uint ret_num_platforms = 0, ret_num_devices = 0;
@@ -24,7 +32,7 @@ void init() {
 
 	cl_uint numPlatformsToCheck = 6;
 	cl_uint numPlatforms;
-	clGetPlatformIDs(numPlatformsToCheck, NULL, &numPlatforms);
+	ret = clGetPlatformIDs(numPlatformsToCheck, NULL, &numPlatforms);
 	cl_platform_id * platforms = new cl_platform_id[numPlatforms];
 
 	cl_queue_properties props[] = { CL_QUEUE_PROPERTIES, CL_QUEUE_PROFILING_ENABLE, 0 };
@@ -40,7 +48,7 @@ void init() {
 	cl_context context = clCreateContext(NULL, 1, &device_id, NULL, NULL, &ret);
 
 	/* создаем команду */
-	cl_command_queue command_queue = clCreateCommandQueueWithProperties(context, device_id, 0, &ret); 
+	cl_command_queue command_queue = clCreateCommandQueueWithProperties(context, device_id, NULL, &ret); 
 									/*clCreateCommandQueueWithProperties(context, device_id, props, &ret);*/
 
 	cl_program program = NULL;
@@ -53,27 +61,21 @@ void init() {
 	size_t source_size;
 	std::unique_ptr<char[]> source;
 
-	try {
-		std::ifstream stream;
-		stream.exceptions(std::ios_base::badbit | std::ios_base::failbit | std::ios_base::eofbit);
-		stream.open(fileName, std::ios_base::in);
-		stream.seekg(0, std::ios_base::end);
-		size_t source_size = stream.tellg();
-		stream.seekg(0, std::ios_base::beg);
-		source.reset(new char[source_size]);
-		stream.read(source.get(), source_size);
-	}
-	catch (const std::exception& e) {
-		std::cerr << "Can't read kernel: " << e.what() << std::endl;
-		exit(1);
-	}
+	std::ifstream sourceFile("Source.cl");
+	std::string sourceCode(std::istreambuf_iterator<char>(sourceFile), (std::istreambuf_iterator<char>()));
 
 	/* создать бинарник из кода программы */
-	program = clCreateProgramWithSource(context, 1, (const char **)&source_str, (const size_t *)&source_size, &ret);
-
+	source_size = 1024;
+	/*Загрузка фала программы из файла*/
+	program = clCreateProgramWithSource(context, 1, (const char **)&sourceCode, (const size_t *)&source_size, &ret);
+	/*Загрузка файла программы из переменной std::string*/
+	//program = clCreateProgramWithSource(context, 1, (const char **)&clSrc, (const size_t *)&source_size, &ret);
+		
 	/* скомпилировать программу */
+	//ret = clBuildProgram(program, 0, &device_id, NULL, NULL, NULL);
+	//ret = clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
 	ret = clBuildProgram(program, 1, &device_id, NULL, NULL, NULL);
-
+	
 	/* создать кернел */
 	kernel = clCreateKernel(program, "test", &ret);
 
@@ -98,11 +100,12 @@ void init() {
 	/* считать данные из буфера */
 	ret = clEnqueueReadBuffer(command_queue, memobj, CL_TRUE, 0, memLenth * sizeof(float), mem, 0, NULL, NULL);
 
-	std::cout << "end";
+	std::cout << "\nend\n" << mem << "\n" << memobj;
 
-	getchar();
+	//getchar();
 
-	system("pause");
+	//system("pause");
+
 }
 
 

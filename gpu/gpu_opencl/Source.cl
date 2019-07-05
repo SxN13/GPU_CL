@@ -1,4 +1,4 @@
-__kernel void test(__global int* message)
+__kernel void test(__global int* message[])
 {
 	// получаем текущий id.
 	int gid = get_global_id(0);
