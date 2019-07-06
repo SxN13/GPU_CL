@@ -15,10 +15,10 @@ int main() {
 	std::vector<double> time_vector(0);
 	
 		//Переменные для регистрации времени выполнения всех тестовтеста
-	clock_t start_m, end_m;
+	std::chrono::steady_clock::time_point start, end;
 		//Переменные для регистрации времени выполнения теста
-	clock_t start, end;
-	
+	std::chrono::steady_clock::time_point start_m, end_m;
+
 	double seconds;
 	
 		//Количество тестов
@@ -43,20 +43,20 @@ int main() {
 	//delete size;
 
 		//Главный цикл выполняюций заданное количество тестов
-	start_m = clock();
+	start_m = std::chrono::steady_clock::now();
 	for (int i = 0; i < pass; i++)
 	{
-		start = clock();
+		start = std::chrono::steady_clock::now();
 		//test_load1(turn, a, b);
 		test_load2(turn, a, b);
 		//test_load3(turn, a, b);
-		end = clock();
+		end = std::chrono::steady_clock::now();
 
 		seconds = time_calculate(start, end);
 		time_vector.push_back(seconds);
 		std::cout << i << "\n";
 	}
-	end_m = clock();
+	end_m = std::chrono::steady_clock::now();
 
 	print_statistic(end_m, start_m, turn, pass, time_vector);
 	write_to_file(end_m, start_m, turn, pass, time_vector, "CPU", "1PC", "1kx1k_vector_mul.csv");

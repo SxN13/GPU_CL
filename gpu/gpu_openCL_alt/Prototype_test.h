@@ -6,52 +6,54 @@
 #include <vector>
 #include <fstream>
 #include <string>
+#include <chrono>
 
-	//////Прототипы функций//////
+//////Прототипы функций//////
 
-	//Перегруженные операторы + для сложения векторов
+//Перегруженные операторы + для сложения векторов
 template<typename T>
 std::vector<T> operator+ (std::vector<T> a, std::vector<T> b);
 template<typename T>
 std::vector<T> operator- (std::vector<T> a, std::vector<T> b);
 template<typename T>
 std::vector<T> operator* (std::vector<T> a, std::vector<T> b);
-	//Возвращает среднее значение выходной выборки
+//Возвращает среднее значение выходной выборки
 template<typename T>
 double average(std::vector<T> v);
-	//Запись в файл csv результатов проведенных тестов
+//Запись в файл csv результатов проведенных тестов
 template<typename T>
 void write_to_file(clock_t end_m, clock_t start_m, int turn, int pass, std::vector<T> v, std::string processor, std::string test_pack, std::string file_name);
-	//Тестовая загрузка №1
+//Тестовая загрузка №1
 void test_load(double turn);
-	//Тестовая загрузка №2, возвращает результат сложения входных векторов А и Б
+//Тестовая загрузка №2, возвращает результат сложения входных векторов А и Б
 template<typename T>
 std::vector<T> test_load1(int turn, std::vector<T> a, std::vector<T> b);
-	//Тестовая загрузка №2, возвращает результат вычитания входных векторов А и Б
+//Тестовая загрузка №2, возвращает результат вычитания входных векторов А и Б
 template<typename T>
 std::vector<T> test_load2(int turn, std::vector<T> a, std::vector<T> b);
-	//Тестовая загрузка №2, возвращает результат умножения входных векторов А и Б
+//Тестовая загрузка №2, возвращает результат умножения входных векторов А и Б
 template<typename T>
 std::vector<T> test_load3(int turn, std::vector<T> a, std::vector<T> b);
-	//Возвращает заполненый вектор с размером size, значение элемента - порядковый номер + смещение seed
+//Возвращает заполненый вектор с размером size, значение элемента - порядковый номер + смещение seed
 std::vector<int> init_vector(int size, int seed);
-	//Возвращает максимальный элемент в выходной выборке
+//Возвращает максимальный элемент в выходной выборке
 template<typename T>
 double find_max(std::vector<T> v);
-	//Возвращает минимальный элемент в выходной выборке
+//Возвращает минимальный элемент в выходной выборке
 template<typename T>
 double find_min(std::vector<T> v);
-	//Вывод на экран статистики тестов
+//Вывод на экран статистики тестов
 template<typename T>
 void print_statistic(clock_t end_m, clock_t start_m, int turn, int pass, std::vector<T> v);
-	//Расчет времени выполнения
-double time_calculate(clock_t start, clock_t end);
+//Расчет времени выполнения
+double time_calculate(std::chrono::steady_clock::time_point start, std::chrono::steady_clock::time_point end);
 ///////////////////////////////////////////////////////////////////
 
 
-double time_calculate(clock_t start, clock_t end)
+double time_calculate(std::chrono::steady_clock::time_point start, std::chrono::steady_clock::time_point end)
 {
-	return ((double)(end - start) / CLOCKS_PER_SEC);
+	auto time = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+	return time.count();
 }
 
 template<typename T>
@@ -99,14 +101,14 @@ double average(std::vector<T> v)
 }
 
 template<typename T>
-void write_to_file(	clock_t end_m, 
-					clock_t start_m, 
-					int turn, 
-					int pass, 
-					std::vector<T> v, 
-					std::string processor, 
-					std::string test_pack, 
-					std::string file_name)
+void write_to_file(std::chrono::steady_clock::time_point end_m,
+	std::chrono::steady_clock::time_point start_m,
+	int turn,
+	int pass,
+	std::vector<T> v,
+	std::string processor,
+	std::string test_pack,
+	std::string file_name)
 {
 	std::ofstream file_out;
 	file_out.open(file_name);
@@ -115,19 +117,19 @@ void write_to_file(	clock_t end_m,
 	std::string tmp = "";
 	for (int i = 0; i < v.size(); i++)
 	{
-		file_out	<< test_pack << ","
-					<< processor << ","
-					<< i << ","
-					<< v[i] << ","
-					<< turn << ","
-					<< pass << ","
-					<< turn * pass << ","
-					<< time_calculate(end_m, start_m) << ","
-					<< CLOCKS_PER_SEC << "\n";
+		file_out << test_pack << ","
+			<< processor << ","
+			<< i << ","
+			<< v[i] << ","
+			<< turn << ","
+			<< pass << ","
+			<< turn * pass << ","
+			<< time_calculate(end_m, start_m) << ","
+			<< CLOCKS_PER_SEC << "\n";
 	}
 }
 
-void test_load(double turn) 
+void test_load(double turn)
 {
 	for (auto i = 0.; i < turn; i += 0.1)
 	{
@@ -144,8 +146,8 @@ void test_load(double turn)
 template<typename T>
 std::vector<T> test_load1(int turn, std::vector<T> a, std::vector<T> b)
 {
-		// turn -> количество проходов цикла сложения векторов
-		//А и Б - входные векторы для сложения
+	// turn -> количество проходов цикла сложения векторов
+	//А и Б - входные векторы для сложения
 	std::vector<T> c;
 	for (int i = 0; i < turn; i++) {
 		c = a + b;
@@ -156,8 +158,8 @@ std::vector<T> test_load1(int turn, std::vector<T> a, std::vector<T> b)
 template<typename T>
 std::vector<T> test_load2(int turn, std::vector<T> a, std::vector<T> b)
 {
-		// turn -> количество проходов цикла сложения векторов
-		//А и Б - входные векторы для вычитания
+	// turn -> количество проходов цикла сложения векторов
+	//А и Б - входные векторы для вычитания
 	std::vector<T> c;
 	for (int i = 0; i < turn; i++) {
 		c = a - b;
@@ -168,8 +170,8 @@ std::vector<T> test_load2(int turn, std::vector<T> a, std::vector<T> b)
 template<typename T>
 std::vector<T> test_load3(int turn, std::vector<T> a, std::vector<T> b)
 {
-		// turn -> количество проходов цикла сложения векторов
-		//А и Б - входные векторы для умножения
+	// turn -> количество проходов цикла сложения векторов
+	//А и Б - входные векторы для умножения
 	std::vector<T> c;
 	for (int i = 0; i < turn; i++) {
 		c = a * b;
@@ -179,8 +181,8 @@ std::vector<T> test_load3(int turn, std::vector<T> a, std::vector<T> b)
 
 std::vector<int> init_vector(int size, int seed)
 {
-		//size - длинна вектора
-		//seed - смещение вектора
+	//size - длинна вектора
+	//seed - смещение вектора
 	srand(seed);
 	std::vector<int> out_vector(0);
 
@@ -217,7 +219,7 @@ double find_min(std::vector<T> v)
 }
 
 template<typename T>
-void print_statistic(clock_t end_m, clock_t start_m, int turn, int pass, std::vector<T> v)
+void print_statistic(std::chrono::steady_clock::time_point end_m, std::chrono::steady_clock::time_point start_m, int turn, int pass, std::vector<T> v)
 {
 	std::cout << "\n______________________________________\n"
 		<< "All time: " << time_calculate(end_m, start_m) << "\n"

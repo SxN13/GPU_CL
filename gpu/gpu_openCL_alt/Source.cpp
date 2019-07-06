@@ -6,6 +6,7 @@
 #include <ctime>
 #include <cmath>
 #include <vector>
+#include <chrono>
 //#ifdef __APPLE__
 //#include <OpenCL/opencl.h>
 //#else
@@ -23,9 +24,9 @@ int main(void)
 	//Вектор хранящий время выполнения теста
 	std::vector<double> time_vector(0);
 	//Переменные для регистрации времени выполнения всех тестовтеста
-	clock_t start_m, end_m;
+	std::chrono::steady_clock::time_point start_m, end_m;
 	//Переменные для регистрации времени выполнения теста
-	clock_t start, end;
+	std::chrono::steady_clock::time_point start, end;
 	double seconds;
 	//Количество тестов
 	int pass = 1000;
@@ -35,8 +36,10 @@ int main(void)
 	// Входные вектора
 	int i;
 	const int LIST_SIZE = 1000;
+
 	int *A = (int*)malloc(sizeof(int)*LIST_SIZE);
 	int *B = (int*)malloc(sizeof(int)*LIST_SIZE);
+	
 	for (i = 0; i < LIST_SIZE; i++) 
 	{
 		A[i] = i + rand() % 10;
@@ -54,6 +57,7 @@ int main(void)
 		fprintf(stderr, "Failed to load kernel.\n");
 		exit(1);
 	}
+	
 	source_str = (char*)malloc(MAX_SOURCE_SIZE);
 	source_size = fread(source_str, 1, MAX_SOURCE_SIZE, fp);
 	fclose(fp);
@@ -78,7 +82,7 @@ int main(void)
 	cl_mem b_mem_obj = clCreateBuffer(context, CL_MEM_READ_ONLY, LIST_SIZE * sizeof(int), NULL, &ret);
 	cl_mem c_mem_obj = clCreateBuffer(context, CL_MEM_WRITE_ONLY, LIST_SIZE * sizeof(int), NULL, &ret);
 
-	// Перенос векторов в буферы для отправки на девайс
+	// Перенос векторов в буферы для отправки на GPU
 	ret = clEnqueueWriteBuffer(command_queue, a_mem_obj, CL_TRUE, 0, LIST_SIZE * sizeof(int), A, 0, NULL, NULL);
 	ret = clEnqueueWriteBuffer(command_queue, b_mem_obj, CL_TRUE, 0, LIST_SIZE * sizeof(int), B, 0, NULL, NULL);
 
@@ -98,34 +102,32 @@ int main(void)
 
 	// Execute the OpenCL kernel on the list
 	size_t global_item_size = LIST_SIZE; // Process the entire lists
-	size_t local_item_size = 64; // Divide work items into groups of 64
-	
+	size_t local_item_size = 512; // Divide work items into groups of 64
+
 	int *C;
 
-	start_m = clock();
+	start_m = std::chrono::steady_clock::now();
 	for (int i = 0; i < 1000; i++)
 	{
 		std::cout << i << "\n";
-		start = clock();
+		start = std::chrono::steady_clock::now();
+		
 		ret = clEnqueueNDRangeKernel(command_queue, kernel, 1, NULL, &global_item_size, &local_item_size, 0, NULL, NULL);
 		// Read the memory buffer C on the device to the local variable C
 		C = (int*)malloc(sizeof(int)*LIST_SIZE);
 		ret = clEnqueueReadBuffer(command_queue, c_mem_obj, CL_TRUE, 0, LIST_SIZE * sizeof(int), C, 0, NULL, NULL);
-		end = clock();
+		
+		end = std::chrono::steady_clock::now();
+		// время в миллисекундах
 		seconds = time_calculate(start, end);
 		time_vector.push_back(seconds);
 	}
-	end_m = clock();
+	end_m = std::chrono::steady_clock::now();
 
 	// Отображение результатов
 	//for (i = 0; i < LIST_SIZE; i++)
 		//printf("%d + %d = %d\n", A[i], B[i], C[i]);
 	print_statistic(end_m, start_m, 1000, 1000, time_vector);
-
-	for (int i = 0; i < time_vector.size(); i++)
-	{
-		std::cout << time_vector[i] << "\n";
-	}
 
 	// Очистка памяти
 	ret = clFlush(command_queue);
@@ -137,6 +139,8 @@ int main(void)
 	ret = clReleaseMemObject(c_mem_obj);
 	ret = clReleaseCommandQueue(command_queue);
 	ret = clReleaseContext(context);
+	
+	//Память
 	free(A);
 	free(B);
 	free(C);
