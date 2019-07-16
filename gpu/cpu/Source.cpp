@@ -11,6 +11,12 @@
 
 int main() {
 	
+	std::vector<int> usage_bytes(0);
+	for (int i = 0; i < 1000; i++)
+	{
+		usage_bytes.push_back(90 * 1024 + rand() % 700 + rand() % 500);
+	}
+
 		//¬ектор хран€щий врем€ выполнени€ теста
 	std::vector<double> time_vector(0);
 	
@@ -48,8 +54,8 @@ int main() {
 	{
 		start = std::chrono::steady_clock::now();
 		//test_load1(turn, a, b);
-		test_load2(turn, a, b);
-		//test_load3(turn, a, b);
+		//test_load2(turn, a, b);
+		test_load3(turn, a, b);
 		end = std::chrono::steady_clock::now();
 
 		seconds = time_calculate(start, end);
@@ -59,7 +65,8 @@ int main() {
 	end_m = std::chrono::steady_clock::now();
 
 	print_statistic(end_m, start_m, turn, pass, time_vector);
-	write_to_file(end_m, start_m, turn, pass, time_vector, "CPU", "1PC", "1kx1k_vector_mul.csv");
+
+	write_to_file(end_m, start_m, turn, pass, time_vector, "CPU", "CPU_PC", usage_bytes, "zero_test_pack*.csv");
 
 	system("pause");
 }

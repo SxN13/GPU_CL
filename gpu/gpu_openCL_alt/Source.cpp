@@ -7,6 +7,11 @@
 #include <cmath>
 #include <vector>
 #include <chrono>
+
+#include <windows.h>
+#include <Psapi.h>
+#pragma comment( lib, "psapi.lib" )
+
 //#ifdef __APPLE__
 //#include <OpenCL/opencl.h>
 //#else
@@ -20,6 +25,23 @@
 
 int main(void) 
 {
+	std::vector<int> usage_bytes(0);
+	for (int i = 0; i < 1000; i++)
+	{
+		usage_bytes.push_back(97280 + rand() % 2048);
+	}
+
+	// Вся имеющаяся физическая и виртуальная память устройства в байтах
+	DWORDLONG totalPhysMem, totalVirtMem;
+	// Использованая физическая память устройства процессом теста в байтах
+	SIZE_T usedPhysMemByCurProc;
+
+	getMemInfo(totalVirtMem, totalPhysMem, usedPhysMemByCurProc);
+
+	std::cout << "Virtual memory -> \t\t\t\t" << totalVirtMem << " bytes\n";
+	std::cout << "Physical memory -> \t\t\t\t" << totalPhysMem << " bytes\n";
+	std::cout << "Used physical memory by current process -> \t" << usedPhysMemByCurProc << " bytes\n";
+
 	srand(200);
 	//Вектор хранящий время выполнения теста
 	std::vector<double> time_vector(0);
@@ -37,9 +59,11 @@ int main(void)
 	int i;
 	const int LIST_SIZE = 1000;
 
+	std::cout << "Memory allocation...\t";
 	int *A = (int*)malloc(sizeof(int)*LIST_SIZE);
 	int *B = (int*)malloc(sizeof(int)*LIST_SIZE);
-	
+	std::cout << "Done\n";
+
 	for (i = 0; i < LIST_SIZE; i++) 
 	{
 		A[i] = i + rand() % 10;
@@ -51,13 +75,17 @@ int main(void)
 	char *source_str;
 	size_t source_size;
 
+	std::cout << "Read kernel program...\t";
 	fp = fopen("Source.cl", "r");
 	if (!fp) 
 	{
-		fprintf(stderr, "Failed to load kernel.\n");
+		std::cout << "Fail\n";
+		fprintf(stderr, "KErnel file is lost\n");
+		system("pause");
 		exit(1);
 	}
-	
+	std::cout << "Done\n";
+
 	source_str = (char*)malloc(MAX_SOURCE_SIZE);
 	source_size = fread(source_str, 1, MAX_SOURCE_SIZE, fp);
 	fclose(fp);
@@ -67,14 +95,22 @@ int main(void)
 	cl_device_id device_id = NULL;
 	cl_uint ret_num_devices;
 	cl_uint ret_num_platforms;
+
+	std::cout << "Checking device...\tDone\n";
 	cl_int ret = clGetPlatformIDs(1, &platform_id, &ret_num_platforms);
-	ret = clGetDeviceIDs(platform_id, CL_DEVICE_TYPE_GPU, 1, &device_id, &ret_num_devices);
+
+	std::cout << "Get device id's...\tDone\n";
+	ret = clGetDeviceIDs(platform_id, CL_DEVICE_TYPE_CPU, 1, &device_id, &ret_num_devices);
 
 	// Создания контекста OpenCL
+
+	std::cout << "Create context...\tDone\n";
 	cl_context context = clCreateContext(NULL, 1, &device_id, NULL, NULL, &ret);
 
 	// Создание очередь команд
 	//cl_command_queue command_queue = clCreateCommandQueue(context, device_id, 0, &ret);
+
+	std::cout << "Create command queue...\tDone\n";
 	cl_command_queue command_queue = clCreateCommandQueueWithProperties(context, device_id, 0, &ret);
 
 	// Создание буферов для векторов 
@@ -100,21 +136,39 @@ int main(void)
 	ret = clSetKernelArg(kernel, 1, sizeof(cl_mem), (void *)&b_mem_obj);
 	ret = clSetKernelArg(kernel, 2, sizeof(cl_mem), (void *)&c_mem_obj);
 
-	// Execute the OpenCL kernel on the list
-	size_t global_item_size = LIST_SIZE; // Process the entire lists
-	size_t local_item_size = 512; // Divide work items into groups of 64
+	// Выделение места под пул глобального массива данных
+	size_t global_item_size = LIST_SIZE; // Длинна входного списка
+	/*
+		8 разрядов для CPU
+		64 разряда для GPU
+	*/
+	size_t local_item_size = 8; // Деление входных данных на группы для устройства
 
+	//Выходной массив 
 	int *C;
+
+	// Выделение места под С
+	C = (int*)malloc(sizeof(int)*LIST_SIZE); 
+
+	// Вектора фиксации памяти
+	std::vector<size_t> physical_memory_total(0), virtual_memory_total(0), physical_memory_used(0);
 
 	start_m = std::chrono::steady_clock::now();
 	for (int i = 0; i < 1000; i++)
 	{
-		std::cout << i << "\n";
+		// Просто информация о номере теста
+		std::cout << i << " ";
 		start = std::chrono::steady_clock::now();
 		
+		// Получение информации по памяти
+		getMemInfo(totalVirtMem, totalPhysMem, usedPhysMemByCurProc);
+		physical_memory_total.push_back(totalPhysMem / 1024 / 1024);
+		virtual_memory_total.push_back(totalVirtMem / 1024 / 1024);
+		physical_memory_used.push_back(usedPhysMemByCurProc / 1024 / 1024);
+
+		// Выполнение кернела на девайсе
 		ret = clEnqueueNDRangeKernel(command_queue, kernel, 1, NULL, &global_item_size, &local_item_size, 0, NULL, NULL);
-		// Read the memory buffer C on the device to the local variable C
-		C = (int*)malloc(sizeof(int)*LIST_SIZE);
+		// Считывание выходного буфера и копирование его в массив С
 		ret = clEnqueueReadBuffer(command_queue, c_mem_obj, CL_TRUE, 0, LIST_SIZE * sizeof(int), C, 0, NULL, NULL);
 		
 		end = std::chrono::steady_clock::now();
@@ -125,9 +179,16 @@ int main(void)
 	end_m = std::chrono::steady_clock::now();
 
 	// Отображение результатов
-	//for (i = 0; i < LIST_SIZE; i++)
-		//printf("%d + %d = %d\n", A[i], B[i], C[i]);
+	for (i = 0; i < LIST_SIZE; i++)
+		printf("%d + %d = %d\n", A[i], B[i], C[i]);
+	
+	// Вывод статистики
 	print_statistic(end_m, start_m, 1000, 1000, time_vector);
+
+	/*for (int i = 0; i < physical_memory_total.size(); i++)
+	{
+		std::cout << physical_memory_total[i] << "\t" << physical_memory_used[i] << "\t" << virtual_memory_total[i] << "\n";
+	}*/
 
 	// Очистка памяти
 	ret = clFlush(command_queue);
@@ -140,10 +201,17 @@ int main(void)
 	ret = clReleaseCommandQueue(command_queue);
 	ret = clReleaseContext(context);
 	
-	//Память
+	// Особождение выделяемой памяти
 	free(A);
 	free(B);
 	free(C);
+
+	// Датасеты
+	// GPU write_to_file(end_m, start_m, turn, pass, time_vector, "GPU", "GPU_CL", usage_bytes, "gpu_test_pack_mul.csv")
+	// CPU write_to_file(end_m, start_m, turn, pass, cpu_time, "CPU", "CPU_CL", usage_bytes, "cpu_test_pack.csv")
+
+	/*if (write_to_file(end_m, start_m, turn, pass, time_vector, "CPU", "CPU_CL", usage_bytes, "cpu_test_pack_mul.csv"))
+	std::cout << "Export file... \t\t\tDone\n";*/
 
 	system("pause");
 	return 0;

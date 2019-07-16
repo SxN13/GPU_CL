@@ -7,6 +7,9 @@
 #include <fstream>
 #include <string>
 #include <chrono>
+#include <windows.h>
+#include <Psapi.h>
+#pragma comment( lib, "psapi.lib" )
 
 //////Прототипы функций//////
 
@@ -22,7 +25,7 @@ template<typename T>
 double average(std::vector<T> v);
 //Запись в файл csv результатов проведенных тестов
 template<typename T>
-void write_to_file(clock_t end_m, clock_t start_m, int turn, int pass, std::vector<T> v, std::string processor, std::string test_pack, std::string file_name);
+void write_to_file(clock_t end_m, clock_t start_m, int turn, int pass, std::vector<T> v, std::string processor, std::string test_pack, std::vector<int> bytes, std::string file_name);
 //Тестовая загрузка №1
 void test_load(double turn);
 //Тестовая загрузка №2, возвращает результат сложения входных векторов А и Б
@@ -47,12 +50,14 @@ template<typename T>
 void print_statistic(clock_t end_m, clock_t start_m, int turn, int pass, std::vector<T> v);
 //Расчет времени выполнения
 double time_calculate(std::chrono::steady_clock::time_point start, std::chrono::steady_clock::time_point end);
+//Получение данных по памяти устройства
+void getMemInfo(DWORDLONG &totalVirtualMem, DWORDLONG &totalPhysMem, SIZE_T &physMemUsedByCurProc);
 ///////////////////////////////////////////////////////////////////
 
 
 double time_calculate(std::chrono::steady_clock::time_point start, std::chrono::steady_clock::time_point end)
 {
-	auto time = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+	auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
 	return time.count();
 }
 
@@ -101,19 +106,20 @@ double average(std::vector<T> v)
 }
 
 template<typename T>
-void write_to_file(std::chrono::steady_clock::time_point end_m,
+bool write_to_file(std::chrono::steady_clock::time_point end_m,
 	std::chrono::steady_clock::time_point start_m,
 	int turn,
 	int pass,
 	std::vector<T> v,
 	std::string processor,
 	std::string test_pack,
+	std::vector<int> bytes,
 	std::string file_name)
 {
 	std::ofstream file_out;
 	file_out.open(file_name);
 
-	file_out << "test_pack," << "processor," << "#iter," << "time," << "turn," << "pass," << "all_iter," << "all_time," << "clock_per_sec" << "\n";
+	file_out << "test_pack," << "processor," << "#iter," << "time," << "memory," << "turn," << "pass," << "all_iter," << "all_time," << "clock_per_sec" << "\n";
 	std::string tmp = "";
 	for (int i = 0; i < v.size(); i++)
 	{
@@ -121,12 +127,15 @@ void write_to_file(std::chrono::steady_clock::time_point end_m,
 			<< processor << ","
 			<< i << ","
 			<< v[i] << ","
+			<< bytes[i] << ","
 			<< turn << ","
 			<< pass << ","
 			<< turn * pass << ","
 			<< time_calculate(end_m, start_m) << ","
 			<< CLOCKS_PER_SEC << "\n";
 	}
+	file_out.close();
+	return true;
 }
 
 void test_load(double turn)
@@ -232,3 +241,14 @@ void print_statistic(std::chrono::steady_clock::time_point end_m, std::chrono::s
 		<< "CLOCKS_PER_SEC: " << CLOCKS_PER_SEC << "\n\n";
 }
 
+void getMemInfo(DWORDLONG &totalVirtualMem, DWORDLONG &totalPhysMem, SIZE_T &physMemUsedByCurProc)
+{
+	MEMORYSTATUSEX memoryInfo;
+	memoryInfo.dwLength = sizeof(MEMORYSTATUSEX);
+	GlobalMemoryStatusEx(&memoryInfo);
+	totalVirtualMem = memoryInfo.ullTotalPageFile;
+	totalPhysMem = memoryInfo.ullTotalPhys;
+	PROCESS_MEMORY_COUNTERS pmc;
+	GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
+	physMemUsedByCurProc = pmc.WorkingSetSize;
+}

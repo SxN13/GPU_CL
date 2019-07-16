@@ -5,6 +5,6 @@ __kernel void vector_add(__global const int *A, __global const int *B, __global 
 	for(int j = 0; j < 1000; j++)
     {
 		// Do the operation
-		C[i] = A[i] + B[i];
+		C[i] = A[i] * B[i];
 	}
 }
