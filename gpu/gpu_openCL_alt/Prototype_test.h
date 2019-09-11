@@ -204,40 +204,30 @@ std::vector<int> init_vector(int size, int seed)
 }
 
 template<typename T>
-double find_max(std::vector<T> v)
+void find_max_min(std::vector<T> v, std::vector<double>& max_min)
 {
-	double out = 0.;
+	max_min.push_back(0.);
+	max_min.push_back(1000000.);
 	for (int i = 0; i < v.size(); i++)
 	{
-		if (out <= v[i]) out = v[i];
+		if (max_min[0] <= v[i]) max_min[0] = v[i];
+		if (v[i] <= max_min[1]) max_min[1] = v[i];
 	}
-
-	return out;
-}
-
-template<typename T>
-double find_min(std::vector<T> v)
-{
-	double out = 1000000.;
-	for (int i = 0; i < v.size(); i++)
-	{
-		if (v[i] <= out) out = v[i];
-	}
-
-	return out;
 }
 
 template<typename T>
 void print_statistic(std::chrono::steady_clock::time_point end_m, std::chrono::steady_clock::time_point start_m, int turn, int pass, std::vector<T> v)
 {
+	std::vector<double> max_min(0);
+	find_max_min(v, max_min);
 	std::cout << "\n______________________________________\n"
 		<< "All time: " << time_calculate(end_m, start_m) << "\n"
 		<< "Numder of iterations in 1 turn: " << turn << "\n"
 		<< "Numder of pass: " << pass << "\n"
 		<< "Number of all itr: " << ((int)turn * pass) << "\n"
 		<< "Averange time for 1 turn: " << average(v) << "\n"
-		<< "Max T: " << find_max(v) << "\n"
-		<< "Min T: " << find_min(v) << "\n"
+		<< "Max T: " << max_min[0] << "\n"
+		<< "Min T: " << max_min[1] << "\n"
 		<< "CLOCKS_PER_SEC: " << CLOCKS_PER_SEC << "\n\n";
 }
 
@@ -251,4 +241,17 @@ void getMemInfo(DWORDLONG &totalVirtualMem, DWORDLONG &totalPhysMem, SIZE_T &phy
 	PROCESS_MEMORY_COUNTERS pmc;
 	GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
 	physMemUsedByCurProc = pmc.WorkingSetSize;
+}
+
+void calculate_energy(std::vector<double>& energy_vector, std::vector<double> time_vector, int proc)
+{
+	//Массив мощностей
+	//0 - CPU, 1 - GPU, 3 - FPGA
+	double average_wattage[] = { 13.5, 27., 1.5 };
+
+
+	for (size_t i = 0; i < time_vector.size(); i++)
+	{
+		energy_vector.push_back(((time_vector[i] / (1000 * 60 * 60))) * average_wattage[proc]);
+	}
 }

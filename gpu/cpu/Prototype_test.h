@@ -38,7 +38,7 @@ std::vector<T> test_load2(int turn, std::vector<T> a, std::vector<T> b);
 template<typename T>
 std::vector<T> test_load3(int turn, std::vector<T> a, std::vector<T> b);
 //Возвращает заполненый вектор с размером size, значение элемента - порядковый номер + смещение seed
-std::vector<int> init_vector(int size, int seed);
+int init_vector(std::vector<double>& vector, int size, int seed);
 //Возвращает максимальный элемент в выходной выборке
 template<typename T>
 double find_max(std::vector<T> v);
@@ -50,8 +50,10 @@ template<typename T>
 void print_statistic(clock_t end_m, clock_t start_m, int turn, int pass, std::vector<T> v);
 //Расчет времени выполнения
 double time_calculate(std::chrono::steady_clock::time_point start, std::chrono::steady_clock::time_point end);
+//Расчет энергии
+void calculate_energy(std::vector<double>& energy_vector, std::vector<double> time_vector, int proc);
 //Получение данных по памяти устройства
-void getMemInfo(DWORDLONG &totalVirtualMem, DWORDLONG &totalPhysMem, SIZE_T &physMemUsedByCurProc);
+void calculate_memory(DWORDLONG& totalVirtualMem, DWORDLONG& totalPhysMem, SIZE_T& physMemUsedByCurProc);
 ///////////////////////////////////////////////////////////////////
 
 
@@ -136,20 +138,6 @@ void write_to_file(std::chrono::steady_clock::time_point end_m,
 	}
 }
 
-void test_load(double turn)
-{
-	for (auto i = 0.; i < turn; i += 0.1)
-	{
-		if (i <= (i + 0.1)) {
-
-		}
-		else
-		{
-
-		}
-	}
-}
-
 template<typename T>
 std::vector<T> test_load1(int turn, std::vector<T> a, std::vector<T> b)
 {
@@ -186,19 +174,15 @@ std::vector<T> test_load3(int turn, std::vector<T> a, std::vector<T> b)
 	return c;
 }
 
-std::vector<int> init_vector(int size, int seed)
+
+int init_vector(std::vector<double>& vector, int size, int seed)
 {
-	//size - длинна вектора
-	//seed - смещение вектора
 	srand(seed);
-	std::vector<int> out_vector(0);
-
-	for (int i = 0; i < size; i++)
+	for (size_t i = 0; i < size; i++)
 	{
-		out_vector.push_back(i + rand() % 10);
+		vector.push_back(rand() % 255);
 	}
-
-	return out_vector;
+	return 0;
 }
 
 template<typename T>
@@ -239,7 +223,20 @@ void print_statistic(std::chrono::steady_clock::time_point end_m, std::chrono::s
 		<< "CLOCKS_PER_SEC: " << CLOCKS_PER_SEC << "\n\n";
 }
 
-void getMemInfo(DWORDLONG &totalVirtualMem, DWORDLONG &totalPhysMem, SIZE_T &physMemUsedByCurProc)
+
+void calculate_energy(std::vector<double>& energy_vector, std::vector<double> time_vector, int proc)
+{
+	//0 - CPU, 1 - GPU, 3 - FPGA
+	double average_wattage[] = { 13.5, 27., 1.5 };
+
+
+	for (size_t i = 0; i < time_vector.size(); i++)
+	{
+		energy_vector.push_back(((time_vector[i] / (1000 * 60 * 60))) * average_wattage[proc]);
+	}
+}
+
+void calculate_memory(DWORDLONG& totalVirtualMem, DWORDLONG& totalPhysMem, SIZE_T& physMemUsedByCurProc)
 {
 	MEMORYSTATUSEX memoryInfo;
 	memoryInfo.dwLength = sizeof(MEMORYSTATUSEX);

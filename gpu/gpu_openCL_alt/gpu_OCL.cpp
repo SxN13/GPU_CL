@@ -19,12 +19,13 @@
 #include <CL/cl.h>
 //#endif
 
-#include "Prototype_test.h"
+#include "../cpu/Prototype_test.h"
 
 #define MAX_SOURCE_SIZE (0x1000000)
 
 int main(void) 
 {
+	setlocale(0, "RUS");
 	std::vector<int> usage_bytes(0);
 	for (int i = 0; i < 1000; i++)
 	{
@@ -36,7 +37,7 @@ int main(void)
 	// Использованая физическая память устройства процессом теста в байтах
 	SIZE_T usedPhysMemByCurProc;
 
-	getMemInfo(totalVirtMem, totalPhysMem, usedPhysMemByCurProc);
+	calculate_memory(totalVirtMem, totalPhysMem, usedPhysMemByCurProc);
 
 	std::cout << "Virtual memory -> \t\t\t\t" << totalVirtMem << " bytes\n";
 	std::cout << "Physical memory -> \t\t\t\t" << totalPhysMem << " bytes\n";
@@ -57,7 +58,7 @@ int main(void)
 
 	// Входные вектора
 	int i;
-	const int LIST_SIZE = 1000;
+	const int LIST_SIZE = 1000000;
 
 	std::cout << "Memory allocation...\t";
 	int *A = (int*)malloc(sizeof(int)*LIST_SIZE);
@@ -100,7 +101,7 @@ int main(void)
 	cl_int ret = clGetPlatformIDs(1, &platform_id, &ret_num_platforms);
 
 	std::cout << "Get device id's...\tDone\n";
-	ret = clGetDeviceIDs(platform_id, CL_DEVICE_TYPE_CPU, 1, &device_id, &ret_num_devices);
+	ret = clGetDeviceIDs(platform_id, CL_DEVICE_TYPE_GPU, 1, &device_id, &ret_num_devices);
 
 	// Создания контекста OpenCL
 
@@ -129,7 +130,7 @@ int main(void)
 	ret = clBuildProgram(program, 1, &device_id, NULL, NULL, NULL);
 
 	// Создание кернела OpenCL
-	cl_kernel kernel = clCreateKernel(program, "vector_add", &ret);
+	cl_kernel kernel = clCreateKernel(program, "add", &ret);
 
 	// Передача буферов в качестве аргумента
 	ret = clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *)&a_mem_obj);
@@ -142,7 +143,7 @@ int main(void)
 		8 разрядов для CPU
 		64 разряда для GPU
 	*/
-	size_t local_item_size = 8; // Деление входных данных на группы для устройства
+	size_t local_item_size = 64; // Деление входных данных на группы для устройства
 
 	//Выходной массив 
 	int *C;
@@ -161,7 +162,7 @@ int main(void)
 		start = std::chrono::steady_clock::now();
 		
 		// Получение информации по памяти
-		getMemInfo(totalVirtMem, totalPhysMem, usedPhysMemByCurProc);
+		calculate_memory(totalVirtMem, totalPhysMem, usedPhysMemByCurProc);
 		physical_memory_total.push_back(totalPhysMem / 1024 / 1024);
 		virtual_memory_total.push_back(totalVirtMem / 1024 / 1024);
 		physical_memory_used.push_back(usedPhysMemByCurProc / 1024 / 1024);
@@ -179,8 +180,25 @@ int main(void)
 	end_m = std::chrono::steady_clock::now();
 
 	// Отображение результатов
-	for (i = 0; i < LIST_SIZE; i++)
-		printf("%d + %d = %d\n", A[i], B[i], C[i]);
+		//Проверка результатов
+	int err_count = 0;
+	std::string str = "";
+	for (size_t i = 0; i < LIST_SIZE; i++)
+	{
+		if (A[i] + B[i] != C[i])
+		{
+			err_count += 1;
+			str += "\n";
+			str += std::to_string(A[i]);
+			str += " + ";
+			str += std::to_string(B[i]);
+			str += " = ";
+			str += std::to_string(C[i]);
+			str += "\n";
+		}
+	}
+
+	std::cout << "\n...Проверка результатов...\n" << "...При проверки обнаружено " << err_count << " ошибок." << str;
 	
 	// Вывод статистики
 	print_statistic(end_m, start_m, 1000, 1000, time_vector);

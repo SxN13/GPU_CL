@@ -1,5 +1,5 @@
 //#include <CL/opencl.h>
-#include <stdio.h> 
+#include <cstdio> 
 #include <ctime> 
 #include <iostream>
 #include <vector>
@@ -18,9 +18,9 @@ int main() {
 	}
 
 		//Вектор хранящий время выполнения теста
-	std::vector<double> time_vector(0);
+	std::vector<double> time_vector(0), memory_vector(0), energy_vector(0);
 	
-		//Переменные для регистрации времени выполнения всех тестовтеста
+		//Переменные для регистрации времени выполнения всех тестов
 	std::chrono::steady_clock::time_point start, end;
 		//Переменные для регистрации времени выполнения теста
 	std::chrono::steady_clock::time_point start_m, end_m;
@@ -34,10 +34,10 @@ int main() {
 	int turn = 1000;
 
 		//Входные вектора
-	std::vector<int> a(0), b(0);
+	std::vector<double> a(0), b(0);
 		//Инициализация входных векторов
-	a = init_vector(1000, 200);
-	b = init_vector(1000, 200);
+	init_vector(a, 1000, 200);
+	init_vector(b, 1000, 200);
 
 		//Резервная полуавтоматическая инициализация входных векторов
 	//int *size = new int(1000);

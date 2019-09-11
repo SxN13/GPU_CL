@@ -1,10 +1,16 @@
-__kernel void vector_add(__global const int *A, __global const int *B, __global int *C) {
- 
-    // Get the index of the current element to be processed
+__kernel void add(__global const int *A, __global const int *B, __global int *C) {
     int i = get_global_id(0);
-	for(int j = 0; j < 1000; j++)
-    {
-		// Do the operation
-		C[i] = A[i] * B[i];
-	}
+	C[i] = A[i] + B[i];
+}
+__kernel void div(__global const int *A, __global const int *B, __global int *C) {
+    int i = get_global_id(0);
+	C[i] = A[i] / B[i];
+}
+__kernel void mul(__global const int *A, __global const int *B, __global int *C) {
+    int i = get_global_id(0);
+	C[i] = A[i] * B[i];
+}
+__kernel void sub(__global const int *A, __global const int *B, __global int *C) {
+    int i = get_global_id(0);
+	C[i] = A[i] - B[i];
 }
