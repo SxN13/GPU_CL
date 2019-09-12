@@ -24,19 +24,20 @@ std::vector<T> operator* (std::vector<T> a, std::vector<T> b);
 template<typename T>
 double average(std::vector<T> v);
 //Запись в файл csv результатов проведенных тестов
-template<typename T>
-void write_to_file(clock_t end_m, clock_t start_m, int turn, int pass, std::vector<T> v, std::string processor, std::string test_pack, std::vector<int> bytes, std::string file_name);
-//Тестовая загрузка №1
-void test_load(double turn);
-//Тестовая загрузка №2, возвращает результат сложения входных векторов А и Б
-template<typename T>
-std::vector<T> test_load1(int turn, std::vector<T> a, std::vector<T> b);
-//Тестовая загрузка №2, возвращает результат вычитания входных векторов А и Б
-template<typename T>
-std::vector<T> test_load2(int turn, std::vector<T> a, std::vector<T> b);
-//Тестовая загрузка №2, возвращает результат умножения входных векторов А и Б
-template<typename T>
-std::vector<T> test_load3(int turn, std::vector<T> a, std::vector<T> b);
+void write_to_file(
+
+	int test,
+	int operation,
+	int n_thread,
+	std::chrono::steady_clock::time_point end_m,
+	std::chrono::steady_clock::time_point start_m,
+	std::vector<int> v,
+	std::vector<int> bytes,
+	std::string file_name
+
+);
+
+void test_load3(std::vector<int> &c, std::vector<int> a, std::vector<int> b);
 //Возвращает заполненый вектор с размером size, значение элемента - порядковый номер + смещение seed
 int init_vector(std::vector<double>& vector, int size, int seed);
 //Возвращает максимальный элемент в выходной выборке
@@ -86,6 +87,24 @@ std::vector<T> operator- (std::vector<T> a, std::vector<T> b)
 }
 
 template<typename T>
+std::vector<T> operator/ (std::vector<T> a, std::vector<T> b)
+{
+	std::vector<T> c(0);
+	for (int i = 0; i < a.size(); i++)
+	{
+		if (b[i] == 0)
+		{
+			c.push_back(a[i] / 1);
+		}
+		else
+		{
+			c.push_back(a[i] / b[i]);
+		}
+	}
+	return c;
+}
+
+template<typename T>
 std::vector<T> operator* (std::vector<T> a, std::vector<T> b)
 {
 	std::vector<T> c(0);
@@ -107,75 +126,45 @@ double average(std::vector<T> v)
 	return tmp / v.size();
 }
 
-template<typename T>
-void write_to_file(std::chrono::steady_clock::time_point end_m,
+void write_to_file(
+
+	int test,
+	int operation,
+	int n_thread,
+	std::chrono::steady_clock::time_point end_m,
 	std::chrono::steady_clock::time_point start_m,
-	int turn,
-	int pass,
-	std::vector<T> v,
-	std::string processor,
-	std::string test_pack,
+	std::vector<int> v,
 	std::vector<int> bytes,
-	std::string file_name)
+	std::string file_name
+	
+	)
 {
 	std::ofstream file_out;
 	file_out.open(file_name);
 
-	file_out << "test_pack," << "processor," << "#iter," << "time," << "memory," << "turn," << "pass," << "all_iter," << "all_time," << "clock_per_sec" << "\n";
+	file_out << "n_test," << "operation," << "n_thread," << "all_time," << "test_time," << "bytes," << "\n";
 	std::string tmp = "";
 	for (int i = 0; i < v.size(); i++)
 	{
-		file_out << test_pack << ","
-			<< processor << ","
-			<< i << ","
-			<< v[i] << ","
-			<< bytes[i] << ","
-			<< turn << ","
-			<< pass << ","
-			<< turn * pass << ","
+		file_out << test << ","
+			<< operation << ","
+			<< n_thread << ","
 			<< time_calculate(end_m, start_m) << ","
-			<< CLOCKS_PER_SEC << "\n";
+			<< v[i] << ","
+			<< bytes[i] << "\n";
 	}
+	file_out.close();
 }
 
-template<typename T>
-std::vector<T> test_load1(int turn, std::vector<T> a, std::vector<T> b)
-{
-	// turn -> количество проходов цикла сложения векторов
-	//А и Б - входные векторы для сложения
-	std::vector<T> c;
-	for (int i = 0; i < turn; i++) {
-		c = a + b;
-	}
-	return c;
-}
-
-template<typename T>
-std::vector<T> test_load2(int turn, std::vector<T> a, std::vector<T> b)
-{
-	// turn -> количество проходов цикла сложения векторов
-	//А и Б - входные векторы для вычитания
-	std::vector<T> c;
-	for (int i = 0; i < turn; i++) {
-		c = a - b;
-	}
-	return c;
-}
-
-template<typename T>
-std::vector<T> test_load3(int turn, std::vector<T> a, std::vector<T> b)
+void test_load3(std::vector<int> &c, std::vector<int> a, std::vector<int> b)
 {
 	// turn -> количество проходов цикла сложения векторов
 	//А и Б - входные векторы для умножения
-	std::vector<T> c;
-	for (int i = 0; i < turn; i++) {
-		c = a * b;
-	}
-	return c;
+	c = a / b;
 }
 
 
-int init_vector(std::vector<double>& vector, int size, int seed)
+int init_vector(std::vector<int>& vector, int size, int seed)
 {
 	srand(seed);
 	for (size_t i = 0; i < size; i++)

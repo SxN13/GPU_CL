@@ -29,7 +29,7 @@ int main(void)
 	std::vector<int> usage_bytes(0);
 	for (int i = 0; i < 1000; i++)
 	{
-		usage_bytes.push_back(97280 + rand() % 2048);
+		usage_bytes.push_back(120280 + rand() % 2048);
 	}
 
 	// Вся имеющаяся физическая и виртуальная память устройства в байтах
@@ -45,7 +45,7 @@ int main(void)
 
 	srand(200);
 	//Вектор хранящий время выполнения теста
-	std::vector<double> time_vector(0);
+	std::vector<int> time_vector(0);
 	//Переменные для регистрации времени выполнения всех тестовтеста
 	std::chrono::steady_clock::time_point start_m, end_m;
 	//Переменные для регистрации времени выполнения теста
@@ -67,8 +67,8 @@ int main(void)
 
 	for (i = 0; i < LIST_SIZE; i++) 
 	{
-		A[i] = i + rand() % 10;
-		B[i] = i + rand() % 10;
+		A[i] = i + rand() % 254 + 1;
+		B[i] = i + rand() % 254 + 1;
 	}
 
 	// Код кернела в source_str
@@ -130,7 +130,7 @@ int main(void)
 	ret = clBuildProgram(program, 1, &device_id, NULL, NULL, NULL);
 
 	// Создание кернела OpenCL
-	cl_kernel kernel = clCreateKernel(program, "add", &ret);
+	cl_kernel kernel = clCreateKernel(program, "mul", &ret);
 
 	// Передача буферов в качестве аргумента
 	ret = clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *)&a_mem_obj);
@@ -185,7 +185,7 @@ int main(void)
 	std::string str = "";
 	for (size_t i = 0; i < LIST_SIZE; i++)
 	{
-		if (A[i] + B[i] != C[i])
+		if (A[i] * B[i] != C[i])
 		{
 			err_count += 1;
 			str += "\n";
@@ -225,11 +225,9 @@ int main(void)
 	free(C);
 
 	// Датасеты
-	// GPU write_to_file(end_m, start_m, turn, pass, time_vector, "GPU", "GPU_CL", usage_bytes, "gpu_test_pack_mul.csv")
-	// CPU write_to_file(end_m, start_m, turn, pass, cpu_time, "CPU", "CPU_CL", usage_bytes, "cpu_test_pack.csv")
-
-	/*if (write_to_file(end_m, start_m, turn, pass, time_vector, "CPU", "CPU_CL", usage_bytes, "cpu_test_pack_mul.csv"))
-	std::cout << "Export file... \t\t\tDone\n";*/
+	std::cout << "\n\n...Запись в файла...\t";
+	write_to_file(1, 0, 0, end_m, start_m, time_vector, usage_bytes, "140.csv");
+	std::cout << " Завершена\n";
 
 	system("pause");
 	return 0;

@@ -123,9 +123,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\cpu\Prototype_test.h" />
-  </ItemGroup>
-  <ItemGroup>
     <ClCompile Include="cpu_thread.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
